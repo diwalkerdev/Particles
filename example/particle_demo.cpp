@@ -20,6 +20,7 @@
 #include "Layout/tree.h"
 #include "Layout/treeiter.h"
 #include "Layout/treeutil.h"
+#include "Particles/particle.h"
 
 #if defined(_MSC_VER)
 #include <SDL.h>
@@ -44,6 +45,8 @@ struct GameStruct
 {
     Window       window;
     EventManager events;
+
+    Particle particle;
 
     struct UI
     {
@@ -80,6 +83,8 @@ GameLoop_Render(GameStruct& game_struct)
     game_struct.ui.scene.ProcessMouseEvents(game_struct.events);
     game_struct.ui.scene.RenderWidgets(game_struct.window.renderer);
 
+    Particle_Render(game_struct.particle, game_struct.window.renderer);
+
     Window_PresentRenderer(game_struct.window);
 }
 
@@ -91,6 +96,7 @@ GameLoop_Simulate(GameStruct& game_struct)
 
     float ms = 1000.f / SIMS_PER_SEC;
     Easing_EngineIntegrate(ms);
+    Particle_Integrate(game_struct.particle, ms);
 }
 
 
@@ -138,7 +144,10 @@ main(int argc, char** argv)
                               argc,
                               argv);
 
+    SDL_SetRenderDrawBlendMode(game_struct.window.renderer,
+                               SDL_BLENDMODE_BLEND);
     InitUI(game_struct);
+    Particle_Init(game_struct.particle);
 
     GameLoop_Main<GameStruct>(game_struct,
                               POLLS_PER_SEC,
