@@ -5,7 +5,6 @@
 #include "Base/typedefs.h"
 #include "Easing/engine.h"
 #include "Layout/Layouts/horizontal.h"
-#include "Layout/Layouts/rectangle.h"
 #include "Layout/Layouts/span.h"
 #include "Layout/Layouts/vertical.h"
 #include "Layout/Widgets/button.h"
@@ -46,6 +45,7 @@ struct GameStruct
     Window       window;
     EventManager events;
 
+    Emitter  emitter;
     Particle particle;
 
     struct UI
@@ -58,8 +58,6 @@ struct GameStruct
 void
 EventManager_Init(EventManager& event_manager)
 {
-    EventManager_AddKeyBinding(event_manager, SDL_SCANCODE_A, EVENT_NO_EVENT);
-    EventManager_AddKeyBinding(event_manager, SDL_SCANCODE_N, EVENT_NO_EVENT);
     EventManager_AddKeyBinding(event_manager, SDL_SCANCODE_M, EVENT_NO_EVENT);
 }
 
@@ -83,7 +81,14 @@ GameLoop_Render(GameStruct& game_struct)
     game_struct.ui.scene.ProcessMouseEvents(game_struct.events);
     game_struct.ui.scene.RenderWidgets(game_struct.window.renderer);
 
+    Emitter_Render(game_struct.emitter, game_struct.window.renderer);
     Particle_Render(game_struct.particle, game_struct.window.renderer);
+    static Vec pos { 200, 200, 0 };
+    static Vec vel { 100.f, 0, 0 };
+
+    vel = Vec_Rotate(vel, 0.1f);
+
+    Vector_Render(game_struct.window.renderer, pos, vel);
 
     Window_PresentRenderer(game_struct.window);
 }
@@ -96,6 +101,8 @@ GameLoop_Simulate(GameStruct& game_struct)
 
     float ms = 1000.f / SIMS_PER_SEC;
     Easing_EngineIntegrate(ms);
+
+    Emitter_Integrate(game_struct.emitter, ms);
     Particle_Integrate(game_struct.particle, ms);
 }
 
@@ -103,14 +110,9 @@ GameLoop_Simulate(GameStruct& game_struct)
 void
 GameLoop_HandleInputs(GameStruct& game_struct)
 {
-    auto* n_bind = EventManager_FindKeyBinding(game_struct.events, SDL_SCANCODE_N);
     auto* m_bind = EventManager_FindKeyBinding(game_struct.events, SDL_SCANCODE_M);
 
-    if (n_bind->state == KEY_PRESSED)
-    {
-        printf("n\n");
-    }
-    else if (m_bind->state == KEY_PRESSED)
+    if (m_bind->state == KEY_PRESSED)
     {
         printf("m\n");
     }
@@ -147,6 +149,7 @@ main(int argc, char** argv)
     SDL_SetRenderDrawBlendMode(game_struct.window.renderer,
                                SDL_BLENDMODE_BLEND);
     InitUI(game_struct);
+    Emitter_Init(game_struct.emitter);
     Particle_Init(game_struct.particle);
 
     GameLoop_Main<GameStruct>(game_struct,
