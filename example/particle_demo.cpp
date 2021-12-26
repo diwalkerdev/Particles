@@ -36,8 +36,8 @@
 // TODO: The rending is currently limited by the polling.
 // We need to poll the timers, at a rate of whatever is quickest.
 compile_float(POLLS_PER_SEC, 30.0);
-compile_float(RENDERS_PER_SEC, 10.0);
-compile_float(SIMS_PER_SEC, 1.0);
+compile_float(RENDERS_PER_SEC, 30.0);
+compile_float(SIMS_PER_SEC, 30.0);
 
 
 struct GameStruct
@@ -67,6 +67,8 @@ GameLoop_Render(GameStruct& game_struct)
 {
     TIME_BLOCK;
 
+    SDL_Renderer* sdl_renderer = game_struct.window.renderer.renderer;
+
     Window_Clear(game_struct.window);
 
     Layout_Resize2(game_struct.ui.scene.tree,
@@ -75,20 +77,27 @@ GameLoop_Render(GameStruct& game_struct)
 
     //Tree_Print(game_struct.ui.scene.tree);
 
-    Layout_Render(game_struct.window.renderer,
+    Layout_Render(sdl_renderer,
                   game_struct.ui.scene.tree);
 
     game_struct.ui.scene.ProcessMouseEvents(game_struct.events);
-    game_struct.ui.scene.RenderWidgets(game_struct.window.renderer);
+    game_struct.ui.scene.RenderWidgets(sdl_renderer);
 
-    Emitter_Render(game_struct.emitter, game_struct.window.renderer);
+    Emitter_Render(game_struct.emitter, sdl_renderer);
     Particle_Render(game_struct.particle, game_struct.window.renderer);
-    static Vec pos { 200, 200, 0 };
+    static float rad_per_sec = (90.f / RENDERS_PER_SEC) * M_PI / 180.f;
+
     static Vec vel { 100.f, 0, 0 };
+    static Vec u { cosf(rad_per_sec), sinf(rad_per_sec), 0.f };
 
-    vel = Vec_Rotate(vel, 0.1f);
+    static Rotor2D avel = Vec_Mul2D(vel, u);
 
-    Vector_Render(game_struct.window.renderer, pos, vel);
+    vel = Vec_Rotate(vel, avel);
+
+    Vector_Render(game_struct.window.renderer,
+                  game_struct.particle.pos,
+                  game_struct.particle.vel,
+                  avel);
 
     Window_PresentRenderer(game_struct.window);
 }
@@ -146,7 +155,7 @@ main(int argc, char** argv)
                               argc,
                               argv);
 
-    SDL_SetRenderDrawBlendMode(game_struct.window.renderer,
+    SDL_SetRenderDrawBlendMode(game_struct.window.renderer.renderer,
                                SDL_BLENDMODE_BLEND);
     InitUI(game_struct);
     Emitter_Init(game_struct.emitter);
